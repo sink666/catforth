@@ -7,6 +7,10 @@
         - name
         - primitive ID or word definition
 
+    we make a few assumptions: 
+        no double cells. 
+        no alt number bases probably...
+
 */
 
 #include <stdio.h>
@@ -46,10 +50,87 @@ cell ip;
 cell last_ip;
 cell w;
 cell quit_address;
+cell here;
 
 /* 'high level' stuff for C-land. 1 = true, 0 = false */
 int request_exit;
 int error;
+
+/* basic c-side operations; stack stuff, memory access */
+void push(cell data)
+{
+    if(*sp >= DATA_STACK_CELLS)
+    {
+        printf("stack overflow!");
+        error = 1;
+        return 0;
+    }
+
+    top_cache = data;
+    stack[(*sp)++] = data;
+}
+
+cell pop()
+{
+    if(*sp == 0)
+    {
+        printf("stack underflow!");
+        error = 1;
+        return 0;
+    }
+    
+    top_cache = stack[(*sp) - CELL_SIZE];
+    return stack[--(*sp)];
+}
+
+cell mem_read(cell addr)
+{
+    if(addr > MEM_SIZE)
+    {
+        printf("internal error in mem_read: invalid address\n");
+        error = 1;
+        return 0;
+    }
+
+    return *((cell*)(memory + addr));
+}
+
+void mem_write(cell addr, cell val)
+{
+    if(addr > MEM_SIZE)
+    {
+        printf("internal error in mem_write: invalid address\n");
+        error = 1;
+        return;
+    }
+
+    *((cell*)(memory + addr)) = val;
+}
+
+/* primitives */
+void prim_mem_read()
+{
+    push(mem_read(pop()));
+}
+
+void prim_mem_write()
+{
+    cell address = pop();
+    cell value = pop();
+    mem_write(address, value);
+}
+
+void prim_mem_write_byte()
+{
+    cell address = pop();
+    cell value = pop();
+    memory[address] = value & 0xFF;
+}
+
+void prim_comma()
+{
+    
+}
 
 /* the pair of interpreters */
 void address_interpreter()

@@ -45,12 +45,15 @@ cell* rp = rack;
     interpreter pointer and a cache of the last one. ip is used by the address interpreter 
     for threading. as in, what the current command is, what the next one will be, etc
     'w' cache, just a scratch register
+    'here' is the current address in memory
+    'state' is the current state of the forth interpreter. compiling or interpreting
 */
 cell ip;
 cell last_ip;
 cell w;
 cell quit_address;
 cell here;
+cell state;
 
 /* 'high level' stuff for C-land. 1 = true, 0 = false */
 int request_exit;
@@ -113,6 +116,11 @@ void prim_mem_read()
     push(mem_read(pop()));
 }
 
+void prim_mem_read_byte()
+{
+    push(memory[pop()]);
+}
+
 void prim_mem_write()
 {
     cell address = pop();
@@ -129,15 +137,40 @@ void prim_mem_write_byte()
 
 void prim_comma()
 {
-    
+    push(here);
+    prim_mem_write();
+    here += CELL_SIZE;
 }
 
+void prim_commaByte()
+{
+    push(here);
+    prim_mem_write_byte();
+    here += sizeof(byte);
+}
+
+void prim_bye()
+{
+    request_exit = 1;
+}
+
+void (*primitives[])(void) = {
+    prim_mem_read,
+    prim_mem_read_byte,
+    prim_mem_write,
+    prim_mem_write_byte,
+    prim_comma,
+    prim_commaByte,
+};
+
 /* the pair of interpreters */
+/* aka NEXT */
 void address_interpreter()
 {
 
 }
 
+/* aka QUIT */
 void outer_interpreter()
 {
     for (request_exit = 0; request_exit == 0;)
@@ -148,10 +181,18 @@ void outer_interpreter()
 
 int main(void)
 {
+    *sp = stack; 
+    *rp = rack;
+    here = 0;
+    state = 0;
+    top_cache = 0;
+
     /* 
         manually add some builtins to the dictionary and then
         run the interpreter to see if it does the work
     */
 
-    return 0;
+   
+   
+   return 0;
 }

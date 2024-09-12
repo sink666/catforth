@@ -59,6 +59,8 @@ cell state;
 int request_exit;
 int error;
 
+const char* firstinput = "BYE";
+
 /* basic c-side operations; stack stuff, memory access */
 void push(cell data)
 {
@@ -110,6 +112,14 @@ void mem_write(cell addr, cell val)
     *((cell*)(memory + addr)) = val;
 }
 
+/* 'cfa' aka the 'code field address' aka */
+cell getCfa(cell addr)
+{
+    byte len = (memory[addr + CELL_SIZE] & MASK_NAMELENGTH) + 1;
+    while((len & (CELL_SIZE - 1)) != 0) len++;
+    return addr + CELL_SIZE + len;
+}
+
 /* primitives */
 void prim_mem_read()
 {
@@ -154,6 +164,9 @@ void prim_bye()
     request_exit = 1;
 }
 
+/* 
+    our list of function pointers to built-ins aka primitives 
+*/
 void (*primitives[])(void) = {
     prim_mem_read,
     prim_mem_read_byte,
@@ -161,9 +174,31 @@ void (*primitives[])(void) = {
     prim_mem_write_byte,
     prim_comma,
     prim_commaByte,
+    prim_bye,
 };
 
-/* the pair of interpreters */
+/* dictionary related words  */
+void dict_add_word()
+{
+
+}
+
+void dict_add_builtin()
+{
+
+}
+
+cell dict_find_word()
+{
+
+}
+
+/* the pair of interpreters and input */
+byte read_word()
+{
+
+}
+
 /* aka NEXT */
 void address_interpreter()
 {
@@ -192,7 +227,7 @@ int main(void)
         run the interpreter to see if it does the work
     */
 
-   
+   outer_interpreter();
    
    return 0;
 }

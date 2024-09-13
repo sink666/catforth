@@ -9,7 +9,7 @@
 
     we make a few assumptions: 
         no double cells. 
-        no alt number bases probably...
+        no alternate number bases
 
 */
 
@@ -27,7 +27,6 @@
 
 #define FLAG_IMMEDIATE 0x80
 #define FLAG_HIDDEN 0x40
-#define FLAG_PRIM 0x30
 #define MASK_NAMELENGTH 0x1F
 
 /* memory, terminal input buffer, word buffer, stacks and their pointers */
@@ -88,6 +87,30 @@ cell pop()
     return stack[--(*sp)];
 }
 
+void rpush(cell data)
+{
+    if(*rp >= RETURN_STACK_CELLS)
+    {
+        printf("return stack overflow!");
+        error = 1;
+        return;
+    }
+
+    rack[(*rp)++] = data;
+}
+
+cell rpop()
+{
+    if(*rp == 0)
+    {
+        printf("return stack underflow!");
+        error = 1;
+        return 0;
+    }
+
+    return rack[--(*rp)];
+}
+
 cell mem_read(cell addr)
 {
     if(addr > MEM_SIZE)
@@ -112,8 +135,27 @@ void mem_write(cell addr, cell val)
     *((cell*)(memory + addr)) = val;
 }
 
-/* 'cfa' aka the 'code field address' aka */
-cell getCfa(cell addr)
+/* dictionary related words  */
+void dict_add_word()
+{
+
+}
+
+void dict_add_builtin()
+{
+
+}
+
+cell dict_find_word()
+{
+
+}
+
+/* 
+    'cfa'; the 'code field address'
+    is it a primitive id or is it a 
+*/
+cell dict_get_cfa(cell addr)
 {
     byte len = (memory[addr + CELL_SIZE] & MASK_NAMELENGTH) + 1;
     while((len & (CELL_SIZE - 1)) != 0) len++;
@@ -159,6 +201,34 @@ void prim_commaByte()
     here += sizeof(byte);
 }
 
+void prim_word()
+{
+
+}
+
+void prim_find()
+{
+    
+}
+
+/* the inner interpreter */
+void prim_execute()
+{
+
+}
+
+/* the outer interpreter */
+void prim_interpret()
+{
+
+}
+
+/* the main loop */
+void prim_quit()
+{
+
+}
+
 void prim_bye()
 {
     request_exit = 1;
@@ -174,45 +244,11 @@ void (*primitives[])(void) = {
     prim_mem_write_byte,
     prim_comma,
     prim_commaByte,
+    prim_execute,
+    prim_interpret,
+    prim_quit,
     prim_bye,
 };
-
-/* dictionary related words  */
-void dict_add_word()
-{
-
-}
-
-void dict_add_builtin()
-{
-
-}
-
-cell dict_find_word()
-{
-
-}
-
-/* the pair of interpreters and input */
-byte read_word()
-{
-
-}
-
-/* aka NEXT */
-void address_interpreter()
-{
-
-}
-
-/* aka QUIT */
-void outer_interpreter()
-{
-    for (request_exit = 0; request_exit == 0;)
-    {
-        
-    }
-}
 
 int main(void)
 {

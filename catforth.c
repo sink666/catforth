@@ -34,6 +34,9 @@ byte memory[MEM_SIZE];
 byte tib[TIB_SIZE];
 byte word[WORD_BUFFER_SIZE];
 
+int tib_pos = 0;
+int tib_len = 0;
+
 cell stack[DATA_STACK_CELLS] = {0};
 cell* sp = stack; 
 cell top_cache = 0;
@@ -59,6 +62,31 @@ int request_exit;
 int error;
 
 const char* firstinput = "BYE";
+
+int input_key_waiting()
+{
+    return tib_pos < tib_len ? -1 : 0;
+}
+
+int input_get_key()
+{
+    int c;
+
+    if(input_key_waiting())
+        return tib[tib_pos++];
+
+    tib_len = 0;
+
+    while((c = fgetc(stdin)) != EOF)
+    {
+        if(tib_len == TIB_SIZE) break;
+        tib[tib_len++] = c;
+        if(c = '\n') break;
+    }
+
+    tib_pos = 1;
+    return tib[0];
+}
 
 /* basic c-side operations; stack stuff, memory access */
 void push(cell data)

@@ -50,7 +50,7 @@ cell* rp = rack;
 cell ip;
 cell last_ip;
 cell w;
-cell quit_address;
+cell quit_addr;
 cell here;
 cell state;
 
@@ -201,14 +201,25 @@ void prim_commaByte()
     here += sizeof(byte);
 }
 
+/* read from TIB into word buffer */
 void prim_word()
 {
+    byte len = 0;
+    char *line = (char*)word;
+    int c;
 
+
+
+    push(1);
+    push(len);
 }
 
 void prim_find()
 {
-    
+    cell len = pop();
+    cell addr = pop();
+    cell ret = dict_find_word(addr, len);
+    push(ret);
 }
 
 /* the inner interpreter */

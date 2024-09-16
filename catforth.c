@@ -63,12 +63,17 @@ int error;
 
 const char* firstinput = "BYE";
 
-int input_key_waiting()
+static int input_key_waiting(void)
 {
     return tib_pos < tib_len ? -1 : 0;
 }
 
-int input_get_key()
+/* 
+    FUCKING SIDE EFFECT CENTRAL 
+    this thing is dual purpose. it both reads from stdin -> TIB and from TIB -> word buffer
+    refactor this stupid function
+*/
+static int input_get_key(void)
 {
     int c;
 
@@ -81,7 +86,7 @@ int input_get_key()
     {
         if(tib_len == TIB_SIZE) break;
         tib[tib_len++] = c;
-        if(c = '\n') break;
+        if(c == '\n') break;
     }
 
     tib_pos = 1;
@@ -89,20 +94,20 @@ int input_get_key()
 }
 
 /* basic c-side operations; stack stuff, memory access */
-void push(cell data)
+static void push(cell data)
 {
     if(*sp >= DATA_STACK_CELLS)
     {
         printf("stack overflow!");
         error = 1;
-        return 0;
+        return;
     }
 
     top_cache = data;
     stack[(*sp)++] = data;
 }
 
-cell pop()
+static cell pop(void)
 {
     if(*sp == 0)
     {
@@ -115,7 +120,7 @@ cell pop()
     return stack[--(*sp)];
 }
 
-void rpush(cell data)
+static void rpush(cell data)
 {
     if(*rp >= RETURN_STACK_CELLS)
     {
@@ -127,7 +132,7 @@ void rpush(cell data)
     rack[(*rp)++] = data;
 }
 
-cell rpop()
+static cell rpop(void)
 {
     if(*rp == 0)
     {
@@ -139,7 +144,7 @@ cell rpop()
     return rack[--(*rp)];
 }
 
-cell mem_read(cell addr)
+static cell mem_read(cell addr)
 {
     if(addr > MEM_SIZE)
     {
@@ -151,7 +156,7 @@ cell mem_read(cell addr)
     return *((cell*)(memory + addr));
 }
 
-void mem_write(cell addr, cell val)
+static void mem_write(cell addr, cell val)
 {
     if(addr > MEM_SIZE)
     {
@@ -164,26 +169,26 @@ void mem_write(cell addr, cell val)
 }
 
 /* dictionary related words  */
-void dict_add_word()
-{
+// void dict_add_word()
+// {
 
-}
+// }
 
-void dict_add_builtin()
-{
+// void dict_add_builtin()
+// {
 
-}
+// }
 
-cell dict_find_word()
-{
+// cell dict_find_word()
+// {
 
-}
+// }
 
 /* 
     'cfa'; the 'code field address'
     is it a primitive id or is it a 
 */
-cell dict_get_cfa(cell addr)
+static cell dict_get_cfa(cell addr)
 {
     byte len = (memory[addr + CELL_SIZE] & MASK_NAMELENGTH) + 1;
     while((len & (CELL_SIZE - 1)) != 0) len++;
@@ -191,38 +196,38 @@ cell dict_get_cfa(cell addr)
 }
 
 /* primitives */
-void prim_mem_read()
+static void prim_mem_read(void)
 {
     push(mem_read(pop()));
 }
 
-void prim_mem_read_byte()
+static void prim_mem_read_byte(void)
 {
     push(memory[pop()]);
 }
 
-void prim_mem_write()
+static void prim_mem_write(void)
 {
     cell address = pop();
     cell value = pop();
     mem_write(address, value);
 }
 
-void prim_mem_write_byte()
+static void prim_mem_write_byte(void)
 {
     cell address = pop();
     cell value = pop();
     memory[address] = value & 0xFF;
 }
 
-void prim_comma()
+static void prim_comma(void)
 {
     push(here);
     prim_mem_write();
     here += CELL_SIZE;
 }
 
-void prim_commaByte()
+static void prim_commaByte(void)
 {
     push(here);
     prim_mem_write_byte();
@@ -230,45 +235,96 @@ void prim_commaByte()
 }
 
 /* read from TIB into word buffer */
-void prim_word()
+static void prim_word(void)
 {
     byte len = 0;
     char *line = (char*)word;
     int c;
 
+    while((c = input_get_key()) != EOF)
+    {
+        if(c == ' ') continue;
+        if(c == '\n') continue;
+        if(c != '\\') break;
 
+        while((c = input_get_key()) != EOF)
+        {
+            if(c == '\n')
+                break;
+        }
+
+    }
+
+    while(c != ' ' && c != '\n' && c != EOF)
+    {
+        if(len >= (WORD_BUFFER_SIZE - 1))
+            break;
+
+        line[++len] = c;
+        c = input_get_key();
+    }
+
+    line[0] = len;
 
     push(1);
     push(len);
 }
 
-void prim_find()
+static void prim_find(void)
 {
+    // printf("word buffer:\n");
+    // for(int i = 0; i < (WORD_BUFFER_SIZE - 1); ++i)
+    // {
+    //     printf("index: %d | char: %c\n", i, word[i]);
+    // }
+
+    /* 
     cell len = pop();
     cell addr = pop();
     cell ret = dict_find_word(addr, len);
-    push(ret);
+    push(ret); 
+    */
 }
 
 /* the inner interpreter */
-void prim_execute()
+static void prim_execute(void)
 {
 
 }
 
 /* the outer interpreter */
-void prim_interpret()
+static void prim_interpret(void)
 {
 
 }
 
 /* the main loop */
-void prim_quit()
+static void prim_quit(void)
 {
+    for (request_exit = 0; request_exit == 0;)
+    {
+        last_ip = ip = quit_addr;
+        error = 0;
+        
+        /* 
+            prim_word: 
+                see input_get_key
+            prim_find: 
+                pop the stack to get the word length and address,
+                call dict_find_word and push the result to the top of the stack
+        */
+        prim_word();
+        prim_find();
 
+        if (error)
+            *sp = *rp = 1;
+        else if(!input_key_waiting())
+            printf("> OK\n");
+        
+    }
 }
 
-void prim_bye()
+static void prim_bye(void)
 {
     request_exit = 1;
 }
@@ -291,8 +347,6 @@ void (*primitives[])(void) = {
 
 int main(void)
 {
-    *sp = stack; 
-    *rp = rack;
     here = 0;
     state = 0;
     top_cache = 0;
@@ -302,7 +356,8 @@ int main(void)
         run the interpreter to see if it does the work
     */
 
-   outer_interpreter();
+    /* enter outer interpreter */
+    prim_quit();
    
    return 0;
 }
